@@ -20,13 +20,21 @@ class Postprocessor:
         type (str): the type of postprocessing to apply. Either "minimal" or "dbn". Default is "minimal".
         fps (int): the frames per second of the model framewise predictions. Default is 50.
     """
-    def __init__(self, type: str = "minimal", fps: int = 50):
+    def __init__(self, type: str = "minimal", fps: int = 50, min_bpm = 55, max_bpm: int = 250):
         assert type in ["minimal", "dbn"]
         self.type = type
         self.fps = fps
+        self.min_bpm = min_bpm
+        self.max_bpm = max_bpm
         if type == "dbn":
             from madmom.features.downbeats import DBNDownBeatTrackingProcessor
-            self.dbn = DBNDownBeatTrackingProcessor(beats_per_bar=[3, 4], min_bpm=55.0, max_bpm=215.0, fps=self.fps, transition_lambda=100, )
+            self.dbn = DBNDownBeatTrackingProcessor(
+                beats_per_bar=[3, 4], 
+                min_bpm=self.min_bpm, 
+                max_bpm=self.max_bpm, 
+                fps=self.fps, 
+                transition_lambda=100
+            )
 
 
     def __call__(self, beat : torch.Tensor, downbeat: torch.Tensor, padding_mask: torch.Tensor | None = None) -> tuple[np.ndarray, np.ndarray]:

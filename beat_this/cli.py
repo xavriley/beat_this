@@ -66,6 +66,18 @@ def get_parser():
         help="Override the option to use madmom's postprocessing DBN.",
     )
     parser.add_argument(
+        "--min-bpm",
+        type=float,
+        default=50.0,
+        help="Minimum BPM for the DBN post-processor.",
+    )
+    parser.add_argument(
+        "--max-bpm",
+        type=float,
+        default=250.0,
+        help="Maximum BPM for the DBN post-processor.",
+    )
+    parser.add_argument(
         "--gpu",
         type=int,
         default=0,
@@ -101,15 +113,22 @@ def derive_output_path(input_path, suffix, append, output=None, parent=None):
         return output_path.with_suffix(suffix)
 
 
-def run(inputs, model, output, suffix, append, skip_existing, touch_first, dbn, gpu, float16):
+def run(inputs, model, output, suffix, append, skip_existing, touch_first, dbn, gpu, float16, min_bpm, max_bpm):
     # determine device
     if torch.cuda.is_available() and gpu >= 0:
         device = torch.device(f"cuda:{gpu}")
     else:
         device = torch.device("cpu")
 
+    if dbn:
+        min_bpm = min_bpm
+        max_bpm = max_bpm
+    else:
+        min_bpm = 50.0
+        max_bpm = 250.0
+
     # prepare model
-    file2file = File2File(model, device, float16, dbn)
+    file2file = File2File(model, device, float16, dbn, min_bpm=min_bpm, max_bpm=max_bpm)
 
     # process inputs
     inputs = [Path(item) for item in inputs]
