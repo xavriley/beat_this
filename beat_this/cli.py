@@ -70,6 +70,18 @@ def get_parser():
         help="Override the option to use madmom's postprocessing DBN.",
     )
     parser.add_argument(
+        "--min-bpm",
+        type=float,
+        default=50.0,
+        help="Minimum BPM for the DBN post-processor.",
+    )
+    parser.add_argument(
+        "--max-bpm",
+        type=float,
+        default=250.0,
+        help="Maximum BPM for the DBN post-processor.",
+    )
+    parser.add_argument(
         "--gpu",
         type=int,
         default=0,
@@ -122,6 +134,8 @@ def run(
     gpu,
     float16,
     activations,
+    min_bpm,
+    max_bpm,
 ):
     # determine device
     if torch.cuda.is_available() and gpu >= 0:
@@ -130,7 +144,7 @@ def run(
         device = torch.device("cpu")
 
     # prepare model
-    file2file = File2File(model, device, float16, dbn)
+    file2file = File2File(model, device, float16, dbn, min_bpm=min_bpm, max_bpm=max_bpm)
     if activations:
 
         def process(audiofile, outfile):
