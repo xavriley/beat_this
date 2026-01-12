@@ -82,6 +82,13 @@ def get_parser():
         help="Maximum BPM for the DBN post-processor.",
     )
     parser.add_argument(
+        "--beats-per-bar",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Allowed beats per bar for the DBN post-processor (default: 3 4). Can specify multiple values, e.g., --beats-per-bar 3 4 5",
+    )
+    parser.add_argument(
         "--gpu",
         type=int,
         default=0,
@@ -136,6 +143,7 @@ def run(
     activations,
     min_bpm,
     max_bpm,
+    beats_per_bar,
 ):
     # determine device
     if torch.cuda.is_available() and gpu >= 0:
@@ -144,7 +152,7 @@ def run(
         device = torch.device("cpu")
 
     # prepare model
-    file2file = File2File(model, device, float16, dbn, min_bpm=min_bpm, max_bpm=max_bpm)
+    file2file = File2File(model, device, float16, dbn, min_bpm=min_bpm, max_bpm=max_bpm, beats_per_bar=beats_per_bar)
     if activations:
 
         def process(audiofile, outfile):

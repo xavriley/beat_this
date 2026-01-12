@@ -21,17 +21,18 @@ class Postprocessor:
         fps (int): the frames per second of the model framewise predictions. Default is 50.
     """
 
-    def __init__(self, type: str = "minimal", fps: int = 50, min_bpm: float = 55.0, max_bpm: float = 215.0):
+    def __init__(self, type: str = "minimal", fps: int = 50, min_bpm: float = 55.0, max_bpm: float = 215.0, beats_per_bar: list[int] | None = None):
         assert type in ["minimal", "dbn"]
         self.type = type
         self.fps = fps
         self.min_bpm = min_bpm
         self.max_bpm = max_bpm
+        self.beats_per_bar = beats_per_bar if beats_per_bar is not None else [3, 4]
         if type == "dbn":
             from madmom.features.downbeats import DBNDownBeatTrackingProcessor
 
             self.dbn = DBNDownBeatTrackingProcessor(
-                beats_per_bar=[3, 4],
+                beats_per_bar=self.beats_per_bar,
                 min_bpm=self.min_bpm,
                 max_bpm=self.max_bpm,
                 fps=self.fps,

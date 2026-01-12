@@ -294,26 +294,30 @@ class Audio2Beats(Audio2Frames):
         dbn (bool): Whether to use the madmom DBN for post-processing. Default is False.
         min_bpm (float): Minimum BPM for the DBN post-processor. Default is 50.0.
         max_bpm (float): Maximum BPM for the DBN post-processor. Default is 250.0.
+        beats_per_bar (list[int]): Allowed beats per bar for the DBN post-processor. Default is [3, 4].
     """
 
     def __init__(
-        self, checkpoint_path="final0", device="cpu", float16=False, dbn=False, min_bpm=50.0, max_bpm=250.0
+        self, checkpoint_path="final0", device="cpu", float16=False, dbn=False, min_bpm=50.0, max_bpm=250.0, beats_per_bar=None
     ):
         super().__init__(checkpoint_path, device, float16)
         self.dbn = dbn
         self.min_bpm = min_bpm
         self.max_bpm = max_bpm
+        self.beats_per_bar = beats_per_bar
         self.frames2beats = Postprocessor(
             type="dbn" if dbn else "minimal", 
             min_bpm=min_bpm, 
-            max_bpm=max_bpm
+            max_bpm=max_bpm,
+            beats_per_bar=beats_per_bar
         )
 
     def __call__(self, signal, sr):
         self.frames2beats = Postprocessor(
             type="dbn" if self.dbn else "minimal", 
             min_bpm=self.min_bpm, 
-            max_bpm=self.max_bpm
+            max_bpm=self.max_bpm,
+            beats_per_bar=self.beats_per_bar
         )
         beat_logits, downbeat_logits = super().__call__(signal, sr)
         return self.frames2beats(beat_logits, downbeat_logits)
