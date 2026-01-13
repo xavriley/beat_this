@@ -295,6 +295,10 @@ class Audio2Beats(Audio2Frames):
         min_bpm (float): Minimum BPM for the DBN post-processor. Default is 50.0.
         max_bpm (float): Maximum BPM for the DBN post-processor. Default is 250.0.
         beats_per_bar (list[int]): Allowed beats per bar for the DBN post-processor. Default is [3, 4].
+    
+    Note:
+        The postprocessor parameters (dbn, min_bpm, max_bpm, beats_per_bar) can be overridden
+        at call time without reinstantiating the object. Pass them as keyword arguments to __call__.
     """
 
     def __init__(
@@ -305,30 +309,86 @@ class Audio2Beats(Audio2Frames):
         self.min_bpm = min_bpm
         self.max_bpm = max_bpm
         self.beats_per_bar = beats_per_bar
-        self.frames2beats = Postprocessor(
+
+    def frames2beats(self, beat_logits, downbeat_logits, *, dbn=None, min_bpm=None, max_bpm=None, beats_per_bar=None):
+        """
+        Convert frame-level beat/downbeat logits to beat times using postprocessing.
+
+        Args:
+            beat_logits: Frame-level beat logits from the model.
+            downbeat_logits: Frame-level downbeat logits from the model.
+            dbn (bool, optional): Override whether to use the madmom DBN for post-processing.
+            min_bpm (float, optional): Override minimum BPM for the DBN post-processor.
+            max_bpm (float, optional): Override maximum BPM for the DBN post-processor.
+            beats_per_bar (list[int], optional): Override allowed beats per bar for the DBN post-processor.
+
+        Returns:
+            tuple: (beats, downbeats) as numpy arrays of times in seconds.
+        """
+        # Use provided values or fall back to instance defaults
+        dbn = dbn if dbn is not None else self.dbn
+        min_bpm = min_bpm if min_bpm is not None else self.min_bpm
+        max_bpm = max_bpm if max_bpm is not None else self.max_bpm
+        beats_per_bar = beats_per_bar if beats_per_bar is not None else self.beats_per_bar
+
+        postprocessor = Postprocessor(
             type="dbn" if dbn else "minimal", 
             min_bpm=min_bpm, 
             max_bpm=max_bpm,
             beats_per_bar=beats_per_bar
         )
+        return postprocessor(beat_logits, downbeat_logits)
 
-    def __call__(self, signal, sr):
-        self.frames2beats = Postprocessor(
-            type="dbn" if self.dbn else "minimal", 
-            min_bpm=self.min_bpm, 
-            max_bpm=self.max_bpm,
-            beats_per_bar=self.beats_per_bar
-        )
+    def __call__(self, signal, sr, *, dbn=None, min_bpm=None, max_bpm=None, beats_per_bar=None):
+        """
+        Extract beat and downbeat positions from an audio signal.
+
+        Args:
+            signal: Audio signal as numpy array or torch tensor.
+            sr: Sample rate of the audio signal.
+            dbn (bool, optional): Override whether to use the madmom DBN for post-processing.
+            min_bpm (float, optional): Override minimum BPM for the DBN post-processor.
+            max_bpm (float, optional): Override maximum BPM for the DBN post-processor.
+            beats_per_bar (list[int], optional): Override allowed beats per bar for the DBN post-processor.
+
+        Returns:
+            tuple: (beats, downbeats) as numpy arrays of times in seconds.
+        """
         beat_logits, downbeat_logits = super().__call__(signal, sr)
-        return self.frames2beats(beat_logits, downbeat_logits)
+        return self.frames2beats(beat_logits, downbeat_logits, dbn=dbn, min_bpm=min_bpm, max_bpm=max_bpm, beats_per_bar=beats_per_bar)
+
 
 class File2Beats(Audio2Beats):
-    def __call__(self, audio_path):
+    def __call__(self, audio_path, *, dbn=None, min_bpm=None, max_bpm=None, beats_per_bar=None):
+        """
+        Extract beat and downbeat positions from an audio file.
+
+        Args:
+            audio_path: Path to the audio file.
+            dbn (bool, optional): Override whether to use the madmom DBN for post-processing.
+            min_bpm (float, optional): Override minimum BPM for the DBN post-processor.
+            max_bpm (float, optional): Override maximum BPM for the DBN post-processor.
+            beats_per_bar (list[int], optional): Override allowed beats per bar for the DBN post-processor.
+
+        Returns:
+            tuple: (beats, downbeats) as numpy arrays of times in seconds.
+        """
         signal, sr = load_audio(audio_path)
-        return super().__call__(signal, sr)
+        return super().__call__(signal, sr, dbn=dbn, min_bpm=min_bpm, max_bpm=max_bpm, beats_per_bar=beats_per_bar)
 
 
 class File2File(File2Beats):
-    def __call__(self, audio_path, output_path):
-        downbeats, beats = super().__call__(audio_path)
+    def __call__(self, audio_path, output_path, *, dbn=None, min_bpm=None, max_bpm=None, beats_per_bar=None):
+        """
+        Extract beat and downbeat positions from an audio file and save to a TSV file.
+
+        Args:
+            audio_path: Path to the input audio file.
+            output_path: Path to the output TSV file.
+            dbn (bool, optional): Override whether to use the madmom DBN for post-processing.
+            min_bpm (float, optional): Override minimum BPM for the DBN post-processor.
+            max_bpm (float, optional): Override maximum BPM for the DBN post-processor.
+            beats_per_bar (list[int], optional): Override allowed beats per bar for the DBN post-processor.
+        """
+        downbeats, beats = super().__call__(audio_path, dbn=dbn, min_bpm=min_bpm, max_bpm=max_bpm, beats_per_bar=beats_per_bar)
         save_beat_tsv(downbeats, beats, output_path)
